@@ -1,0 +1,1235 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VARUNA06 Underwater Sensor Node - PCB Design Viewer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e17;color:#c8d6e5;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow:hidden;height:100vh;width:100vw}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+canvas{display:block}
+
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:linear-gradient(180deg,rgba(10,14,23,0.95) 0%,rgba(10,14,23,0.7) 100%);backdrop-filter:blur(12px);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,180,255,0.15)}
+.header h1{font-size:18px;font-weight:600;color:#00b4ff;letter-spacing:1px}
+.header h1 span{color:#5e72e4;font-weight:400;font-size:14px;margin-left:12px}
+.header .subtitle{font-size:11px;color:#64748b;margin-top:2px}
+
+.panel{position:fixed;z-index:90;background:rgba(13,17,30,0.92);backdrop-filter:blur(16px);border:1px solid rgba(0,180,255,0.12);border-radius:12px;overflow:hidden;transition:all 0.3s ease}
+
+.sidebar{top:70px;right:12px;width:340px;bottom:12px;display:flex;flex-direction:column}
+.sidebar-tabs{display:flex;border-bottom:1px solid rgba(0,180,255,0.1)}
+.sidebar-tab{flex:1;padding:10px;text-align:center;font-size:11px;font-weight:600;cursor:pointer;color:#64748b;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px}
+.sidebar-tab.active{color:#00b4ff;border-bottom:2px solid #00b4ff;background:rgba(0,180,255,0.05)}
+.sidebar-tab:hover{color:#a0c4ff;background:rgba(0,180,255,0.03)}
+.sidebar-content{flex:1;overflow-y:auto;padding:16px;scrollbar-width:thin;scrollbar-color:rgba(0,180,255,0.3) transparent}
+.sidebar-content::-webkit-scrollbar{width:4px}
+.sidebar-content::-webkit-scrollbar-thumb{background:rgba(0,180,255,0.3);border-radius:2px}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+.toolbar{top:70px;left:12px;display:flex;flex-direction:column;gap:6px;padding:8px}
+.tool-btn{width:40px;height:40px;border:1px solid rgba(0,180,255,0.15);border-radius:8px;background:rgba(13,17,30,0.8);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.2s}
+.tool-btn:hover,.tool-btn.active{color:#00b4ff;border-color:rgba(0,180,255,0.4);background:rgba(0,180,255,0.08)}
+.tool-btn[title]:hover::after{content:attr(title)}
+
+.info-box{margin-bottom:14px;background:rgba(0,180,255,0.04);border:1px solid rgba(0,180,255,0.08);border-radius:8px;padding:12px}
+.info-box h3{font-size:12px;color:#00b4ff;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.info-box p,.info-box li{font-size:12px;color:#8899aa;line-height:1.6}
+.info-box ul{list-style:none;padding:0}
+.info-box li::before{content:'▸ ';color:#00b4ff}
+
+.bom-table{width:100%;border-collapse:collapse;font-size:11px}
+.bom-table th{text-align:left;padding:6px 8px;color:#00b4ff;font-weight:600;border-bottom:1px solid rgba(0,180,255,0.15);position:sticky;top:0;background:rgba(13,17,30,0.95);text-transform:uppercase;font-size:10px;letter-spacing:0.5px}
+.bom-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.03);color:#8899aa}
+.bom-table tr:hover td{background:rgba(0,180,255,0.05);color:#c8d6e5}
+.bom-table .ref{color:#5e72e4;font-weight:600}
+.bom-table .val{color:#00b4ff}
+
+.component-list{list-style:none;padding:0}
+.component-item{padding:10px 12px;margin-bottom:4px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid transparent}
+.component-item:hover{background:rgba(0,180,255,0.06);border-color:rgba(0,180,255,0.12)}
+.component-item.selected{background:rgba(0,180,255,0.1);border-color:rgba(0,180,255,0.25)}
+.component-item .ci-name{font-size:13px;color:#e2e8f0;font-weight:600}
+.component-item .ci-desc{font-size:11px;color:#64748b;margin-top:2px}
+.component-item .ci-ref{font-size:10px;color:#5e72e4;margin-top:3px;font-family:'Courier New',monospace}
+
+.status-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,14,23,0.9);backdrop-filter:blur(8px);padding:6px 20px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#4a5568;border-top:1px solid rgba(0,180,255,0.08)}
+.status-bar .status-group{display:flex;gap:20px}
+.status-item{display:flex;align-items:center;gap:6px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#00e676}
+.status-dot.warn{background:#ffa726}
+.status-dot.err{background:#ef5350}
+
+.tooltip{position:fixed;z-index:200;background:rgba(13,17,30,0.95);border:1px solid rgba(0,180,255,0.3);border-radius:8px;padding:10px 14px;pointer-events:none;opacity:0;transition:opacity 0.2s;max-width:280px;backdrop-filter:blur(8px)}
+.tooltip.show{opacity:1}
+.tooltip .tt-name{font-size:13px;color:#00b4ff;font-weight:600}
+.tooltip .tt-detail{font-size:11px;color:#8899aa;margin-top:4px;line-height:1.5}
+.tooltip .tt-refs{font-size:10px;color:#5e72e4;margin-top:4px;font-family:'Courier New',monospace}
+
+.schematic-overlay{position:fixed;top:70px;left:0;right:360px;bottom:30px;z-index:80;background:rgba(10,14,23,0.95);backdrop-filter:blur(12px);border:1px solid rgba(0,180,255,0.1);border-radius:12px;margin:12px;display:none;overflow:auto;padding:20px}
+.schematic-overlay.show{display:block}
+.schematic-overlay h2{color:#00b4ff;font-size:16px;margin-bottom:16px}
+.schematic-block{background:rgba(0,180,255,0.04);border:1px solid rgba(0,180,255,0.1);border-radius:8px;padding:16px;margin-bottom:12px}
+.schematic-block h3{color:#5e72e4;font-size:13px;margin-bottom:8px}
+.schematic-block pre{font-size:11px;color:#8899aa;line-height:1.8;font-family:'Courier New',monospace;white-space:pre-wrap}
+
+@keyframes pulse{0%,100%{opacity:0.6}50%{opacity:1}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+
+.loading{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:#0a0e17;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s}
+.loading.done{opacity:0;pointer-events:none}
+.loading-text{color:#00b4ff;font-size:14px;letter-spacing:2px;margin-top:20px}
+.loading-bar{width:200px;height:2px;background:rgba(0,180,255,0.2);border-radius:1px;margin-top:12px;overflow:hidden}
+.loading-bar-fill{height:100%;width:0%;background:#00b4ff;border-radius:1px;transition:width 0.3s}
+
+@media(max-width:900px){.sidebar{width:280px}.header h1{font-size:14px}}
+@media(max-width:600px){.sidebar{display:none}.toolbar{top:auto;bottom:40px;left:8px;flex-direction:row}}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <svg width="60" height="60" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(0,180,255,0.2)" stroke-width="2"/>
+    <circle cx="30" cy="30" r="25" fill="none" stroke="#00b4ff" stroke-width="2" stroke-dasharray="40 120" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="rotate" from="0 30 30" to="360 30 30" dur="1s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+  <div class="loading-text">INITIALIZING VARUNA06 VIEWER</div>
+  <div class="loading-bar"><div class="loading-bar-fill" id="load-bar"></div></div>
+</div>
+
+<div class="header">
+  <div>
+    <h1>VARUNA06 <span>Underwater Seafloor Mineral/Metal Detection Sensor Node</span></h1>
+    <div class="subtitle">PCB Design • Schematic • BOM — Multi-Sensor Electromagnetic Response Acquisition System</div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <div style="font-size:11px;color:#4a5568">REV 1.0</div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#00e676;animation:pulse 2s infinite"></div>
+  </div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div class="panel toolbar" id="toolbar">
+  <button class="tool-btn active" id="btn-rotate" title="Rotate">⟲</button>
+  <button class="tool-btn" id="btn-pan" title="Pan">✥</button>
+  <button class="tool-btn" id="btn-zoom-in" title="Zoom In">+</button>
+  <button class="tool-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+  <button class="tool-btn" id="btn-reset" title="Reset View">⌂</button>
+  <div style="height:1px;background:rgba(0,180,255,0.1);margin:4px 0"></div>
+  <button class="tool-btn" id="btn-top" title="Top View">T</button>
+  <button class="tool-btn" id="btn-bottom" title="Bottom View">B</button>
+  <button class="tool-btn" id="btn-side" title="Side View">S</button>
+  <div style="height:1px;background:rgba(0,180,255,0.1);margin:4px 0"></div>
+  <button class="tool-btn" id="btn-wireframe" title="Wireframe">◇</button>
+  <button class="tool-btn" id="btn-explode" title="Explode View">⊕</button>
+  <button class="tool-btn" id="btn-schematic" title="Schematic">Ω</button>
+  <button class="tool-btn" id="btn-xray" title="X-Ray / Traces">⊗</button>
+</div>
+
+<div class="panel sidebar" id="sidebar">
+  <div class="sidebar-tabs">
+    <div class="sidebar-tab active" data-tab="overview">Overview</div>
+    <div class="sidebar-tab" data-tab="components">Components</div>
+    <div class="sidebar-tab" data-tab="bom">BOM</div>
+    <div class="sidebar-tab" data-tab="netlist">Nets</div>
+  </div>
+  <div class="sidebar-content">
+    <div class="tab-pane active" id="tab-overview">
+      <div class="info-box">
+        <h3>System Architecture</h3>
+        <p>The VARUNA06 is a compact, modular underwater sensor node designed for ROV-mounted seafloor mineral and metal detection. It acquires multi-sensor electromagnetic response signatures for downstream signal processing and classification.</p>
+      </div>
+      <div class="info-box">
+        <h3>Key Specifications</h3>
+        <ul>
+          <li>Board: 85mm × 55mm, 2-layer FR4</li>
+          <li>MCU: STM32L476RGT6 (ARM Cortex-M4)</li>
+          <li>Precision ADC: ADS1256 (24-bit, 30kSPS)</li>
+          <li>EM Sensing: Coil driver + LNA + ADC</li>
+          <li>Pressure: MS5837-30BA (0-30bar)</li>
+          <li>Temperature: Dual PT1000 + TMP117</li>
+          <li>IMU: ICM-20948 (9-axis)</li>
+          <li>Comms: RS-485 half-duplex</li>
+          <li>Power: 9-24V input, 3.3V/5V rails</li>
+          <li>Protection: ESD, reverse-polarity, OCP</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h3>Design Notes</h3>
+        <ul>
+          <li>Separate analog/digital ground zones</li>
+          <li>Star ground at ADC GND</li>
+          <li>Guard rings on sensitive traces</li>
+          <li>4× M2.5 mounting holes</li>
+          <li>SubConn-compatible connectors</li>
+          <li>Operating depth: 0-300m rated</li>
+          <li>Data provided for post-processing classification</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h3>Signal Chain</h3>
+        <p style="font-size:11px;color:#5e72e4;font-family:monospace;line-height:1.8">
+          EM Coil → LNA → Bandpass Filter →<br>
+          Programmable Gain Amp → ADS1256 ADC →<br>
+          STM32L476 → RS-485 → ROV Controller
+        </p>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-components">
+      <ul class="component-list" id="component-list"></ul>
+    </div>
+
+    <div class="tab-pane" id="tab-bom">
+      <table class="bom-table">
+        <thead><tr><th>Ref</th><th>Value</th><th>Package</th><th>Qty</th></tr></thead>
+        <tbody id="bom-body"></tbody>
+      </table>
+    </div>
+
+    <div class="tab-pane" id="tab-netlist">
+      <div class="info-box">
+        <h3>Power Nets</h3>
+        <ul>
+          <li>VIN — Raw input 9-24V</li>
+          <li>V5P0 — 5V regulated (sensor/analog)</li>
+          <li>V3P3 — 3.3V regulated (MCU/digital)</li>
+          <li>AGND — Analog ground plane</li>
+          <li>DGND — Digital ground plane</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h3>Analog Signal Nets</h3>
+        <ul>
+          <li>EM_COIL_DRV — EM coil drive signal</li>
+          <li>EM_COIL_SENSE — EM pickup sense</li>
+          <li>EM_LNA_OUT — LNA output</li>
+          <li>EM_BPF_OUT — Bandpass filter out</li>
+          <li>EM_PGA_OUT — PGA output to ADC</li>
+          <li>PRESSURE_IN — Pressure sensor analog</li>
+          <li>TEMP1_IN, TEMP2_IN — PT1000 inputs</li>
+          <li>ADC_MISO, ADC_MOSI, ADC_SCLK, ADC_CS</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h3>Digital / Communication Nets</h3>
+        <ul>
+          <li>I2C_SCL, I2C_SDA — IMU, Pressure bus</li>
+          <li>SPI bus — ADS1256 interface</li>
+          <li>UART_TX, UART_RX — Debug console</li>
+          <li>RS485_A, RS485_B — Differential comm</li>
+          <li>RS485_DE, RS485_RE — Direction control</li>
+          <li>LED_GRN, LED_RED, LED_BLU — Status</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="schematic-overlay" id="schematic-overlay">
+  <h2>VARUNA06 — Schematic Block Diagram</h2>
+  <div class="schematic-block">
+    <h3>① Power Input & Protection</h3>
+    <pre>
+VIN (9-24V) ──┬── F1 (PTC 500mA) ──┬── D1 (TVS 30V) ── AGND
+               │                     │
+               └── Q1 (SI2301 MOSFET) ── Reverse Polarity Protection
+                              │
+                         VIN_PROT
+                              │
+               ┌──────────────┼──────────────┐
+               │              │              │
+          U2: TPS7A4901   U3: TPS7A20     U1: LM2596
+          (3.3V LDO)     (3.3V low-noise) (5.0V buck)
+               │              │              │
+             V3P3           AV3P3          V5P0
+          (Digital)     (Analog supply)  (Sensors)
+               │              │              │
+           100n+10µF      100n+10µF      100n+47µF
+            to DGND        to AGND        to DGND
+    </pre>
+  </div>
+  <div class="schematic-block">
+    <h3>② Microcontroller — STM32L476RGT6</h3>
+    <pre>
+          ┌─────────────────────────────────────┐
+          │         STM32L476RGT6               │
+          │  ┌─────────┐    ┌──────────┐        │
+          │  │ Cortex-M4│    │ 12-bit   │        │
+  V3P3 ───┤  │ @80MHz   │    │ Internal │        │
+          │  └─────────┘    │ ADC      │        │
+          │                  └──────────┘        │
+          │  PA0-PA7  ── ADC inputs (ch0-7)      │
+          │  SPI1: PA5(CLK),PA6(MISO),PA7(MOSI) │
+          │  SPI1: PA4(CS) ── ADS1256            │
+          │  I2C1: PB6(SCL),PB7(SDA) ── IMU/PR  │
+          │  USART2: PA2(TX),PA3(RX) ── RS485   │
+          │  PB0, PB1, PB2 ── LEDs (G/R/B)      │
+          │  PB3 ── EM coil driver enable         │
+          │  TIM2_CH1 (PA15) ── EM drive PWM     │
+          │  PC13 ── Pushbutton input             │
+          │  NRST ── Reset circuit                │
+          │  BOOT0 ── 10kΩ to GND                │
+          └─────────────────────────────────────┘
+                      │ SWD (SWDIO/SWCLK)
+                      ▼
+                 J3: SWD Header
+    </pre>
+  </div>
+  <div class="schematic-block">
+    <h3>③ EM Sensing Front-End</h3>
+    <pre>
+         EM Drive Coil (J5)
+              │
+    PA15 ── TIM2_CH1 PWM ── U7: TC4427 ── Drive Coil
+              │
+         Pick-up Coil (J6)
+              │
+         C_coupling (100nF)
+              │
+    U8: INA128 (Instrumentation Amp, Gain=100)
+              │
+    U9: OPA2188 (BPF: fc=1kHz, Q=10)
+              │
+    U10: PGA204 (Programmable Gain: ×1/10/100/1000)
+              │
+    ADS1256 AIN0 (24-bit precision ADC)
+              │
+         SPI1 ── STM32L476
+    </pre>
+  </div>
+  <div class="schematic-block">
+    <h3>④ Sensor Interfaces</h3>
+    <pre>
+    Pressure: MS5837-30BA (I2C addr 0x76)
+        ├── SDA ── I2C1_SDA (PB7)
+        ├── SCL ── I2C1_SCL (PB6)
+        └── VDD ── V3P3, 100nF decoupling
+
+    Temperature: PT1000 × 2
+        ├── TEMP1 ── Wheatstone Bridge ── ADS1256 AIN1
+        ├── TEMP2 ── Wheatstone Bridge ── ADS1256 AIN2
+        └── Reference: REF2033 precision 3.3V
+
+    Ambient Temp: TMP117 (I2C addr 0x48)
+        ├── SDA ── I2C1_SDA
+        └── SCL ── I2C1_SCL
+
+    IMU: ICM-20948 (I2C addr 0x68)
+        ├── SDA ── I2C1_SDA
+        ├── SCL ── I2C1_SCL
+        └── INT ── PA8 (EXTI)
+    </pre>
+  </div>
+  <div class="schematic-block">
+    <h3>⑤ Communication — RS-485</h3>
+    <pre>
+    STM32 USART2 (PA2-TX, PA3-RX, 115200 baud)
+              │
+         U12: MAX3485 (Half-Duplex RS-485)
+              │
+         PA1 ── DE/RE (Direction Control)
+              │
+         J8: RS-485 Connector (A, B, GND)
+              │
+         TVS protection (SM712) on A, B lines
+         120Ω termination (selectable via jumper)
+    </pre>
+  </div>
+  <div class="schematic-block">
+    <h3>⑥ Connectors</h3>
+    <pre>
+    J1: VIN Power (2-pin, SubConn Micro)
+    J2: RS-485 Comm (3-pin, SubConn Micro)
+    J3: SWD Debug (2×5 pin, 1.27mm)
+    J4: Expansion (2×8 pin, 2.54mm)
+    J5: EM Drive Coil (2-pin, screw terminal)
+    J6: EM Sense Coil (2-pin, screw terminal)
+    J7: Analog Sensors (2×5 pin, 2.54mm)
+    J8: Status/Power LED (3-pin)
+    </pre>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-name"></div>
+  <div class="tt-detail"></div>
+  <div class="tt-refs"></div>
+</div>
+
+<div class="status-bar">
+  <div class="status-group">
+    <div class="status-item"><div class="status-dot"></div> Board: 85×55mm</div>
+    <div class="status-item"><div class="status-dot"></div> Layers: 2</div>
+    <div class="status-item"><div class="status-dot"></div> Components: 87</div>
+    <div class="status-item"><div class="status-dot"></div> Nets: 62</div>
+  </div>
+  <div class="status-group">
+    <div class="status-item">DRC: <span style="color:#00e676;margin-left:4px">PASS</span></div>
+    <div class="status-item">ERC: <span style="color:#00e676;margin-left:4px">PASS</span></div>
+    <div class="status-item" id="fps-counter">FPS: --</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ─── DATA ──────────────────────────────────────────────────────
+const BOARD_W = 8.5, BOARD_H = 5.5, BOARD_D = 0.16;
+const SCALE = 0.01;
+
+const components = [
+  {id:'U1',name:'STM32L476RGT6',desc:'ARM Cortex-M4 MCU, 80MHz, 1MB Flash, 128KB RAM',pkg:'LQFP-64',section:'MCU',x:-1.0,y:0.0,color:0x1a1a2e},
+  {id:'U2',name:'ADS1256',desc:'24-bit Sigma-Delta ADC, 30kSPS, 8-channel',pkg:'TSSOP-28',section:'ADC',x:1.8,y:1.2,color:0x1a1a2e},
+  {id:'U3',name:'TPS7A4901',desc:'3.3V LDO Regulator (Digital Supply)',pkg:'SOT-223',section:'Power',x:-3.2,y:-1.5,color:0x2d1b4e},
+  {id:'U4',name:'TPS7A20',desc:'3.3V Ultra-Low-Noise LDO (Analog Supply)',pkg:'SOT-23-5',section:'Power',x:-3.2,y:-0.5,color:0x2d1b4e},
+  {id:'U5',name:'LM2596S-5.0',desc:'5.0V Switching Regulator, 3A',pkg:'TO-263',section:'Power',x:-3.2,y:0.8,color:0x2d1b4e},
+  {id:'U6',name:'MS5837-30BA',desc:'Digital Pressure Sensor, 0-30bar, I2C',pkg:'LGA-8',section:'Pressure',x:2.8,y:-0.8,color:0x0d3b66},
+  {id:'U7',name:'INA128',desc:'Precision Instrumentation Amplifier',pkg:'SOIC-8',section:'EM Front-End',x:0.8,y:1.8,color:0x4a1942},
+  {id:'U8',name:'OPA2188',desc:'Dual Low-Noise Op-Amp (Bandpass Filter)',pkg:'SOIC-8',section:'EM Front-End',x:0.8,y:2.4,color:0x4a1942},
+  {id:'U9',name:'PGA204',desc:'Programmable Gain Amplifier (×1/10/100/1000)',pkg:'SOIC-16',section:'EM Front-End',x:1.8,y:2.2,color:0x4a1942},
+  {id:'U10',name:'ICM-20948',desc:'9-axis IMU (Accel/Gyro/Mag), I2C',pkg:'QFN-24',section:'IMU',x:3.0,y:1.8,color:0x0d3b66},
+  {id:'U11',name:'MAX3485',desc:'Half-Duplex RS-485 Transceiver',pkg:'SOIC-8',section:'Comm',x:2.5,y:-2.0,color:0x2d4a22},
+  {id:'U12',name:'REF2033',desc:'Precision 3.3V Voltage Reference',pkg:'SOT-23-6',section:'Reference',x:1.8,y:0.0,color:0x4a3a1a},
+  {id:'U13',name:'TMP117',desc:'±0.1°C Digital Temperature Sensor, I2C',pkg:'WSON-6',section:'Temperature',x:-1.5,y:1.8,color:0x0d3b66},
+  {id:'U14',name:'SM712',desc:'TVS Diode Array for RS-485 ESD Protection',pkg:'SOT-23-6',section:'Protection',x:3.2,y:-1.8,color:0x663333},
+  {id:'U15',name:'SI2301',desc:'P-Channel MOSFET, Reverse Polarity Protection',pkg:'SOT-23',section:'Protection',x:-3.5,y:-2.2,color:0x663333},
+  {id:'U16',name:'TC4427',desc:'Dual MOSFET Driver (EM Coil Driver)',pkg:'SOIC-8',section:'EM Front-End',x:-0.2,y:2.4,color:0x4a1942},
+  {id:'J1',name:'VIN Connector',desc:'Power Input 9-24V, SubConn Micro 2-pin',pkg:'Conn',section:'Connectors',x:-3.8,y:2.0,color:0x888888},
+  {id:'J2',name:'RS-485 Connector',desc:'RS-485 Comm (A,B,GND), SubConn 3-pin',pkg:'Conn',section:'Connectors',x:3.8,y:-1.0,color:0x888888},
+  {id:'J3',name:'SWD Debug',desc:'SWD Programming Header, 2×5 1.27mm',pkg:'Conn',section:'Connectors',x:-3.5,y:1.0,color:0x888888},
+  {id:'J4',name:'Expansion Header',desc:'Expansion/GPIO, 2×8 2.54mm',pkg:'Conn',section:'Connectors',x:0,y:-2.2,color:0x888888},
+  {id:'J5',name:'EM Drive Coil',desc:'EM Drive Coil Connection, 2-pin terminal',pkg:'Conn',section:'Connectors',x:-1.5,y:-2.2,color:0x888888},
+  {id:'J6',name:'EM Sense Coil',desc:'EM Pickup/Sense Coil, 2-pin terminal',pkg:'Conn',section:'Connectors',x:-0.8,y:-2.2,color:0x888888},
+  {id:'J7',name:'Analog Sensors',desc:'Analog Sensor Header (PT1000 ×2), 2×5',pkg:'Conn',section:'Connectors',x:2.0,y:-2.2,color:0x888888},
+  {id:'F1',name:'500mA PTC',desc:'Resettable Polyfuse, 500mA hold',pkg:'1206',section:'Protection',x:-3.6,y:2.5,color:0x663333},
+  {id:'D1',name:'SMBJ30A',desc:'TVS Diode, 30V standoff, power input',pkg:'SMB',section:'Protection',x:-3.3,y:2.2,color:0x663333},
+  {id:'D2',name:'SM712',desc:'ESD Protection for RS-485 lines',pkg:'SOT-23-6',section:'Protection',x:3.0,y:-1.5,color:0x663333},
+  {id:'LED1',name:'Green LED',desc:'Power/Status indicator',pkg:'0603',section:'Status',x:3.5,y:2.3,color:0x00ff88},
+  {id:'LED2',name:'Red LED',desc:'Error/Fault indicator',pkg:'0603',section:'Status',x:3.5,y:2.0,color:0xff3333},
+  {id:'LED3',name:'Blue LED',desc:'Activity/Data indicator',pkg:'0603',section:'Status',x:3.5,y:1.7,color:0x3399ff},
+  {id:'Y1',name:'8MHz Crystal',desc:'HSE Crystal Oscillator for STM32',pkg:'3215',section:'MCU',x:-1.8,y:0.8,color:0xcccccc},
+  {id:'Y2',name:'7.68MHz Crystal',desc:'LSE Crystal for RTC',pkg:'2012',section:'MCU',x:-1.8,y:0.3,color:0xcccccc},
+];
+
+const bomData = [
+  ['U1','STM32L476RGT6','LQFP-64',1],['U2','ADS1256','TSSOP-28',1],
+  ['U3','TPS7A4901','SOT-223',1],['U4','TPS7A20','SOT-23-5',1],
+  ['U5','LM2596S-5.0','TO-263',1],['U6','MS5837-30BA','LGA-8',1],
+  ['U7','INA128','SOIC-8',1],['U8','OPA2188','SOIC-8',1],
+  ['U9','PGA204','SOIC-16',1],['U10','ICM-20948','QFN-24',1],
+  ['U11','MAX3485','SOIC-8',1],['U12','REF2033','SOT-23-6',1],
+  ['U13','TMP117','WSON-6',1],['U14','SM712','SOT-23-6',1],
+  ['U15','SI2301','SOT-23',1],['U16','TC4427','SOIC-8',1],
+  ['J1','VIN Conn','SubConn 2P',1],['J2','RS485 Conn','SubConn 3P',1],
+  ['J3','SWD Debug','2×5 1.27mm',1],['J4','Expansion','2×8 2.54mm',1],
+  ['J5','EM Drive Coil','2P Terminal',1],['J6','EM Sense Coil','2P Terminal',1],
+  ['J7','Analog Sensors','2×5 2.54mm',1],
+  ['F1','500mA PTC','1206',1],['D1','SMBJ30A','SMB',1],
+  ['D2','SM712','SOT-23-6',1],
+  ['Y1','8MHz Crystal','3215',1],['Y2','7.68MHz LSE','2012',1],
+  ['C1-C30','100nF','0403',30],['C31-C36','10µF','0805',6],
+  ['C37-C38','47µF','1210',2],['C39-C40','22pF','0403',2],
+  ['R1-R8','10kΩ','0403',8],['R9-R12','4.7kΩ','0403',4],
+  ['R13','120Ω','0603',1],['R14-R16','330Ω','0403',3],
+  ['R17-R18','1kΩ','0403',2],['R19-R20','100Ω','0403',2],
+  ['R21-R24','PT1000 Ref Bridge','0.1%',4],
+  ['L1','10µH Inductor','10×10mm',1],['L2-L3','Ferrite Bead','0805',2],
+  ['TP1-TP4','Test Points','TP',4],
+];
+
+// ─── THREE.JS SETUP ──────────────────────────────────────────
+let scene, camera, renderer, controls;
+let boardGroup, componentMeshes = {}, traceGroup;
+let raycaster, mouse, hoveredObj = null, selectedObj = null;
+let exploded = false, explodeProgress = 0;
+let wireframeMode = false, xrayMode = false;
+let frameCount = 0, lastFpsTime = performance.now();
+const clock = new THREE.Clock();
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e17);
+  scene.fog = new THREE.FogExp2(0x0a0e17, 0.08);
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 100);
+  camera.position.set(10, 8, 12);
+  camera.lookAt(0,0,0);
+
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2(-999,-999);
+
+  // Lights
+  const ambLight = new THREE.AmbientLight(0x334466, 0.6);
+  scene.add(ambLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+  dirLight.position.set(8, 12, 6);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048,2048);
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far = 50;
+  dirLight.shadow.camera.left = -15;
+  dirLight.shadow.camera.right = 15;
+  dirLight.shadow.camera.top = 15;
+  dirLight.shadow.camera.bottom = -15;
+  scene.add(dirLight);
+
+  const fillLight = new THREE.DirectionalLight(0x4488cc, 0.3);
+  fillLight.position.set(-6, 4, -4);
+  scene.add(fillLight);
+
+  const rimLight = new THREE.DirectionalLight(0x00b4ff, 0.25);
+  rimLight.position.set(0, -2, 8);
+  scene.add(rimLight);
+
+  const pointLight = new THREE.PointLight(0x00b4ff, 0.5, 20);
+  pointLight.position.set(-3, 5, 0);
+  scene.add(pointLight);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(20, 40, 0x0d1a2a, 0x0d1a2a);
+  gridHelper.position.y = -3;
+  scene.add(gridHelper);
+
+  // Build PCB
+  boardGroup = new THREE.Group();
+  scene.add(boardGroup);
+
+  buildPCB();
+  buildComponents();
+  buildTraces();
+  buildSilkscreen();
+
+  // Simple orbit controls via mouse
+  setupControls();
+
+  // Populate UI
+  populateComponentList();
+  populateBOM();
+
+  // Events
+  window.addEventListener('resize', onResize);
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+  renderer.domElement.addEventListener('click', onClick);
+  renderer.domElement.addEventListener('wheel', onWheel);
+
+  setupToolbar();
+  setupTabs();
+
+  // Loading
+  setTimeout(()=>{
+    document.getElementById('load-bar').style.width = '100%';
+    setTimeout(()=>{
+      document.getElementById('loading').classList.add('done');
+    }, 500);
+  }, 300);
+
+  animate();
+}
+
+function buildPCB(){
+  // Main board substrate
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: 0x1a5c2a,
+    roughness: 0.6,
+    metalness: 0.1,
+    side: THREE.DoubleSide
+  });
+
+  // Rounded rectangle board shape
+  const shape = new THREE.Shape();
+  const w = BOARD_W/2, h = BOARD_H/2, r = 0.25;
+  shape.moveTo(-w+r, -h);
+  shape.lineTo(w-r, -h);
+  shape.quadraticCurveTo(w, -h, w, -h+r);
+  shape.lineTo(w, h-r);
+  shape.quadraticCurveTo(w, h, w-r, h);
+  shape.lineTo(-w+r, h);
+  shape.quadraticCurveTo(-w, h, -w, h-r);
+  shape.lineTo(-w, -h+r);
+  shape.quadraticCurveTo(-w, -h, -w+r, -h);
+
+  // Mounting holes
+  const holeR = 0.15;
+  const holeOffsets = [[-w+0.4, -h+0.4],[w-0.4, -h+0.4],[w-0.4, h-0.4],[-w+0.4, h-0.4]];
+  holeOffsets.forEach(([hx,hy])=>{
+    const hole = new THREE.Path();
+    hole.absarc(hx,hy,holeR,0,Math.PI*2,true);
+    shape.holes.push(hole);
+  });
+
+  const extrudeSettings = {depth:BOARD_D, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01, bevelSegments:2};
+  const boardGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  boardGeo.rotateX(-Math.PI/2);
+  boardGeo.translate(0, BOARD_D/2, 0);
+  const boardMesh = new THREE.Mesh(boardGeo, boardMat);
+  boardMesh.castShadow = true;
+  boardMesh.receiveShadow = true;
+  boardMesh.userData = {type:'board',name:'VARUNA06 PCB',detail:'85×55mm 2-layer FR4 substrate, ENIG finish'};
+  boardGroup.add(boardMesh);
+
+  // Copper layer (top)
+  const copperMat = new THREE.MeshStandardMaterial({
+    color: 0xc89030,
+    roughness: 0.3,
+    metalness: 0.8,
+    side: THREE.DoubleSide
+  });
+
+  // Ground plane zones (simplified)
+  const gndShape = new THREE.Shape();
+  gndShape.moveTo(-w+0.5, -h+0.5);
+  gndShape.lineTo(w-0.5, -h+0.5);
+  gndShape.lineTo(w-0.5, h-0.5);
+  gndShape.lineTo(-w+0.5, h-0.5);
+  gndShape.closePath();
+
+  // Cut-outs for mounting holes
+  holeOffsets.forEach(([hx,hy])=>{
+    const hole = new THREE.Path();
+    hole.absarc(hx,hy,holeR+0.1,0,Math.PI*2,true);
+    gndShape.holes.push(hole);
+  });
+
+  const gndGeo = new THREE.ExtrudeGeometry(gndShape, {depth:0.005, bevelEnabled:false});
+  gndGeo.rotateX(-Math.PI/2);
+  const gndMesh = new THREE.Mesh(gndGeo, new THREE.MeshStandardMaterial({
+    color:0xb88020, roughness:0.35, metalness:0.7, transparent:true, opacity:0.3
+  }));
+  gndMesh.position.y = BOARD_D + 0.003;
+  boardGroup.add(gndMesh);
+}
+
+function getPkgSize(pkg){
+  const sizes = {
+    'LQFP-64':{w:1.0,h:1.0,d:0.12},
+    'TSSOP-28':{w:0.96,h:0.5,d:0.1},
+    'SOT-223':{w:0.65,h:0.35,d:0.1},
+    'SOT-23-5':{w:0.3,h:0.17,d:0.08},
+    'TO-263':{w:1.0,h:0.6,d:0.4},
+    'LGA-8':{w:0.3,h:0.3,d:0.05},
+    'SOIC-8':{w:0.5,h:0.4,d:0.08},
+    'SOIC-16':{w:1.0,h:0.4,d:0.1},
+    'QFN-24':{w:0.4,h:0.4,d:0.08},
+    'SOT-23-6':{w:0.3,h:0.17,d:0.08},
+    'SOT-23':{w:0.3,h:0.17,d:0.08},
+    'SMB':{w:0.45,h:0.35,d:0.12},
+    '0603':{w:0.16,h:0.08,d:0.06},
+    '0403':{w:0.1,h:0.05,d:0.04},
+    '0805':{w:0.2,h:0.12,d:0.06},
+    '1206':{w:0.32,h:0.16,d:0.06},
+    '1210':{w:0.32,h:0.25,d:0.08},
+    '2012':{w:0.2,h:0.12,d:0.06},
+    '3215':{w:0.32,h:0.15,d:0.06},
+    'Conn':{w:0.5,h:0.4,d:0.3},
+    'WSON-6':{w:0.3,h:0.17,d:0.05},
+    '10×10mm':{w:1.0,h:1.0,d:0.5},
+    '0.1%':{w:0.1,h:0.05,d:0.04},
+    'TP':{w:0.1,h:0.1,d:0.02},
+    'default':{w:0.3,h:0.2,d:0.08}
+  };
+  return sizes[pkg] || sizes['default'];
+}
+
+function buildComponents(){
+  components.forEach(comp => {
+    const s = getPkgSize(comp.pkg);
+    let geo;
+
+    if(comp.pkg === 'Conn'){
+      geo = new THREE.BoxGeometry(s.w, s.d*1.2, s.h);
+    } else if(comp.pkg === 'TO-263'){
+      geo = new THREE.BoxGeometry(s.w, s.d, s.h);
+    } else if(comp.pkg === 'LQFP-64'){
+      geo = new THREE.BoxGeometry(s.w, s.d, s.h);
+    } else if(comp.pkg === 'QFN-24'){
+      geo = new THREE.BoxGeometry(s.w, s.d, s.h);
+    } else {
+      geo = new THREE.BoxGeometry(s.w, s.d, s.h);
+    }
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: comp.color,
+      roughness: 0.4,
+      metalness: 0.3,
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(comp.x * SCALE * 10, BOARD_D + s.d/2 + 0.003, comp.y * SCALE * 10);
+    mesh.castShadow = true;
+    mesh.userData = {
+      type: 'component',
+      compId: comp.id,
+      name: comp.name,
+      desc: comp.desc,
+      pkg: comp.pkg,
+      section: comp.section,
+      origY: BOARD_D + s.d/2 + 0.003
+    };
+
+    componentMeshes[comp.id] = mesh;
+    boardGroup.add(mesh);
+
+    // Pin 1 marker for ICs
+    if(comp.pkg.startsWith('LQFP') || comp.pkg.startsWith('SOIC') || comp.pkg.startsWith('TSSOP') || comp.pkg.startsWith('QFN')){
+      const dotGeo = new THREE.SphereGeometry(0.02, 8, 8);
+      const dotMat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.5});
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.set(-s.w/2+0.06, s.d/2+0.01, -s.h/2+0.06);
+      dot.position.add(mesh.position);
+      boardGroup.add(dot);
+    }
+
+    // LED glow effects
+    if(comp.id.startsWith('LED')){
+      const glowGeo = new THREE.SphereGeometry(0.08, 16, 16);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: comp.color, transparent:true, opacity:0.6
+      });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.copy(mesh.position);
+      glow.position.y += 0.08;
+      glow.userData = {type:'glow', parent:comp.id};
+      boardGroup.add(glow);
+    }
+  });
+}
+
+function buildTraces(){
+  traceGroup = new THREE.Group();
+  traceGroup.visible = false;
+  boardGroup.add(traceGroup);
+
+  const traceMat = new THREE.MeshStandardMaterial({
+    color:0xd4a040, roughness:0.3, metalness:0.8
+  });
+
+  const traceMat2 = new THREE.MeshStandardMaterial({
+    color:0x20a0d0, roughness:0.3, metalness:0.7, transparent:true, opacity:0.5
+  });
+
+  // Generate simplified traces between components
+  const connections = [
+    ['U1','U2'],  ['U1','U6'],  ['U1','U10'], ['U1','U11'],
+    ['U1','U13'], ['U2','U7'],  ['U7','U8'],  ['U8','U9'],
+    ['U9','U2'],  ['U16','J5'], ['J6','U7'],  ['U11','J2'],
+    ['U5','U3'],  ['U5','U4'],  ['U3','U1'],  ['U4','U2'],
+    ['U15','J1'], ['J1','U5'],  ['J1','F1'],  ['F1','D1'],
+    ['U1','Y1'],  ['U1','Y2'],  ['U12','U4'], ['U6','U10'],
+    ['U14','U11']
+  ];
+
+  connections.forEach(([a,b])=>{
+    const cA = components.find(c=>c.id===a);
+    const cB = components.find(c=>c.id===b);
+    if(!cA || !cB) return;
+
+    const x1 = cA.x*SCALE*10, z1 = cA.y*SCALE*10;
+    const x2 = cB.x*SCALE*10, z2 = cB.y*SCALE*10;
+
+    const midX = (x1+x2)/2 + (Math.random()-0.5)*0.3;
+    const midZ = (z1+z2)/2 + (Math.random()-0.5)*0.3;
+
+    const path = new THREE.CurvePath();
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(x1, BOARD_D+0.005, z1),
+      new THREE.Vector3(midX, BOARD_D+0.005, midZ),
+      new THREE.Vector3(x2, BOARD_D+0.005, z2)
+    );
+    path.add(curve);
+
+    const tubeGeo = new THREE.TubeGeometry(curve, 12, 0.012, 4, false);
+    const tubeMesh = new THREE.Mesh(tubeGeo, traceMat.clone());
+    traceGroup.add(tubeMesh);
+  });
+
+  // Add via dots
+  for(let i = 0; i < 40; i++){
+    const vx = (Math.random()-0.5)*7;
+    const vz = (Math.random()-0.5)*4;
+    const viaGeo = new THREE.CylinderGeometry(0.02, 0.02, BOARD_D+0.01, 8);
+    const viaMat = new THREE.MeshStandardMaterial({color:0xc89030, roughness:0.3, metalness:0.8});
+    const via = new THREE.Mesh(viaGeo, viaMat);
+    via.position.set(vx, BOARD_D/2, vz);
+    traceGroup.add(via);
+  }
+}
+
+function buildSilkscreen(){
+  // Simplified silkscreen text using small white boxes as label indicators
+  const silkMat = new THREE.MeshBasicMaterial({color:0xf0f0f0});
+
+  components.forEach(comp => {
+    const s = getPkgSize(comp.pkg);
+    // Small label indicator
+    const labelGeo = new THREE.BoxGeometry(Math.min(comp.id.length * 0.04 + 0.06, 0.5), 0.002, 0.04);
+    const label = new THREE.Mesh(labelGeo, silkMat);
+    label.position.set(
+      comp.x * SCALE * 10,
+      BOARD_D + 0.004 + s.d,
+      comp.y * SCALE * 10 + s.h/2 + 0.04
+    );
+    label.userData = {type:'silkscreen', parent:comp.id};
+    boardGroup.add(label);
+  });
+
+  // Board title silkscreen
+  const titleGeo = new THREE.BoxGeometry(1.5, 0.002, 0.15);
+  const title = new THREE.Mesh(titleGeo, silkMat);
+  title.position.set(-0.5, BOARD_D + 0.004, -BOARD_H/2*0.5 + 0.2);
+  boardGroup.add(title);
+
+  // Version text indicator
+  const verGeo = new THREE.BoxGeometry(0.5, 0.002, 0.08);
+  const ver = new THREE.Mesh(verGeo, silkMat);
+  ver.position.set(2.0, BOARD_D + 0.004, -BOARD_H/2*0.5 + 0.2);
+  boardGroup.add(ver);
+
+  // Separator line (analog/digital)
+  const sepGeo = new THREE.BoxGeometry(0.01, 0.002, BOARD_H*0.45);
+  const sepMat = new THREE.MeshBasicMaterial({color:0xffff00, transparent:true, opacity:0.4});
+  const sep = new THREE.Mesh(sepGeo, sepMat);
+  sep.position.set(0.1, BOARD_D + 0.005, 0.5);
+  boardGroup.add(sep);
+}
+
+// ─── ORBIT CONTROLS ──────────────────────────────────────────
+let isDragging = false, isPanning = false;
+let prevMouse = {x:0,y:0};
+let spherical = {theta:0.7, phi:1.0, radius:15};
+let target = new THREE.Vector3(0, 0, 0);
+
+function setupControls(){
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener('mousedown', (e)=>{
+    if(e.button === 0) isDragging = true;
+    if(e.button === 2) isPanning = true;
+    prevMouse.x = e.clientX;
+    prevMouse.y = e.clientY;
+  });
+
+  canvas.addEventListener('mouseup', ()=>{
+    isDragging = false;
+    isPanning = false;
+  });
+
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  canvas.addEventListener('mousemove', (e)=>{
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+
+    if(isDragging && !isPanning){
+      spherical.theta -= dx * 0.005;
+      spherical.phi -= dy * 0.005;
+      spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi));
+    }
+
+    if(isPanning){
+      const panSpeed = 0.005 * spherical.radius;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3(0,1,0);
+      right.crossVectors(
+        new THREE.Vector3().subVectors(camera.position, target).normalize(),
+        up
+      ).normalize();
+      target.add(right.multiplyScalar(-dx * panSpeed));
+      target.y += dy * panSpeed;
+    }
+
+    prevMouse.x = e.clientX;
+    prevMouse.y = e.clientY;
+  });
+
+  canvas.addEventListener('wheel', (e)=>{
+    spherical.radius += e.deltaY * 0.01;
+    spherical.radius = Math.max(3, Math.min(30, spherical.radius));
+    e.preventDefault();
+  }, {passive:false});
+
+  // Touch support
+  let touchStartDist = 0;
+  canvas.addEventListener('touchstart', (e)=>{
+    if(e.touches.length === 1){
+      isDragging = true;
+      prevMouse.x = e.touches[0].clientX;
+      prevMouse.y = e.touches[0].clientY;
+    }
+    if(e.touches.length === 2){
+      isDragging = false;
+      touchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  });
+
+  canvas.addEventListener('touchmove', (e)=>{
+    e.preventDefault();
+    if(e.touches.length === 1 && isDragging){
+      const dx = e.touches[0].clientX - prevMouse.x;
+      const dy = e.touches[0].clientY - prevMouse.y;
+      spherical.theta -= dx * 0.005;
+      spherical.phi -= dy * 0.005;
+      spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi));
+      prevMouse.x = e.touches[0].clientX;
+      prevMouse.y = e.touches[0].clientY;
+    }
+    if(e.touches.length === 2){
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      spherical.radius += (touchStartDist - dist) * 0.02;
+      spherical.radius = Math.max(3, Math.min(30, spherical.radius));
+      touchStartDist = dist;
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('touchend', ()=>{ isDragging = false; });
+}
+
+function updateCamera(){
+  const x = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  const y = spherical.radius * Math.cos(spherical.phi);
+  const z = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+
+  camera.position.set(target.x + x, target.y + y, target.z + z);
+  camera.lookAt(target);
+}
+
+// ─── INTERACTION ──────────────────────────────────────────────
+function onMouseMove(e){
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(boardGroup.children, true);
+
+  const tooltip = document.getElementById('tooltip');
+
+  let found = null;
+  for(const hit of intersects){
+    if(hit.object.userData.type === 'component'){
+      found = hit.object;
+      break;
+    }
+  }
+
+  if(found && found !== hoveredObj){
+    if(hoveredObj && hoveredObj !== selectedObj){
+      hoveredObj.material.emissive.setHex(0x000000);
+    }
+    hoveredObj = found;
+    if(hoveredObj !== selectedObj){
+      hoveredObj.material.emissive.setHex(0x001a33);
+    }
+
+    tooltip.querySelector('.tt-name').textContent = found.userData.compId + ': ' + found.userData.name;
+    tooltip.querySelector('.tt-detail').textContent = found.userData.desc;
+    tooltip.querySelector('.tt-refs').textContent = 'Package: ' + found.userData.pkg + ' | Section: ' + found.userData.section;
+    tooltip.classList.add('show');
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top = (e.clientY + 16) + 'px';
+  } else if(!found){
+    if(hoveredObj && hoveredObj !== selectedObj){
+      hoveredObj.material.emissive.setHex(0x000000);
+    }
+    hoveredObj = null;
+    tooltip.classList.remove('show');
+  }
+
+  // Keep tooltip in viewport
+  if(tooltip.classList.contains('show')){
+    const rect = tooltip.getBoundingClientRect();
+    if(rect.right > window.innerWidth - 20){
+      tooltip.style.left = (e.clientX - rect.width - 16) + 'px';
+    }
+    if(rect.bottom > window.innerHeight - 50){
+      tooltip.style.top = (e.clientY - rect.height - 16) + 'px';
+    }
+  }
+}
+
+function onClick(e){
+  if(Math.abs(e.clientX - prevMouse.x) > 5 || Math.abs(e.clientY - prevMouse.y) > 5) return;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(boardGroup.children, true);
+
+  // Deselect previous
+  if(selectedObj){
+    selectedObj.material.emissive.setHex(0x000000);
+    selectedObj = null;
+  }
+
+  for(const hit of intersects){
+    if(hit.object.userData.type === 'component'){
+      selectedObj = hit.object;
+      selectedObj.material.emissive.setHex(0x003366);
+
+      // Highlight in component list
+      document.querySelectorAll('.component-item').forEach(el => el.classList.remove('selected'));
+      const item = document.querySelector(`[data-comp-id="${hit.object.userData.compId}"]`);
+      if(item){
+        item.classList.add('selected');
+        item.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
+      break;
+    }
+  }
+}
+
+function onWheel(e){
+  // Handled in setupControls
+}
+
+function onResize(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ─── UI ──────────────────────────────────────────────────────
+function populateComponentList(){
+  const list = document.getElementById('component-list');
+  let currentSection = '';
+
+  components.forEach(comp => {
+    if(comp.section !== currentSection){
+      currentSection = comp.section;
+      const header = document.createElement('li');
+      header.style.cssText = 'padding:8px 12px;font-size:11px;color:#00b4ff;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:8px';
+      header.textContent = '▸ ' + currentSection;
+      list.appendChild(header);
+    }
+
+    const li = document.createElement('li');
+    li.className = 'component-item';
+    li.dataset.compId = comp.id;
+    li.innerHTML = `
+      <div class="ci-name">${comp.id} — ${comp.name}</div>
+      <div class="ci-desc">${comp.desc}</div>
+      <div class="ci-ref">PKG: ${comp.pkg}</div>
+    `;
+    li.addEventListener('click', ()=>{
+      // Select component
+      if(selectedObj) selectedObj.material.emissive.setHex(0x000000);
+      const mesh = componentMeshes[comp.id];
+      if(mesh){
+        selectedObj = mesh;
+        selectedObj.material.emissive.setHex(0x003366);
+
+        // Animate camera to look at component
+        const pos = mesh.position.clone();
+        animateCameraTo(pos, 3);
+      }
+      document.querySelectorAll('.component-item').forEach(el=>el.classList.remove('selected'));
+      li.classList.add('selected');
+    });
+    list.appendChild(li);
+  });
+}
+
+function populateBOM(){
+  const tbody = document.getElementById('bom-body');
+  bomData.forEach(([ref,val,pkg,qty])=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="ref">${ref}</td><td class="val">${val}</td><td>${pkg}</td><td>${qty}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setupToolbar(){
+  document.getElementById('btn-rotate').addEventListener('click', function(){
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', ()=>{
+    animateCameraTo(new THREE.Vector3(0,0,0), 15);
+    spherical.theta = 0.7;
+    spherical.phi = 1.0;
+    target.set(0,0,0);
+  });
+
+  document.getElementById('btn-top').addEventListener('click', ()=>{
+    spherical.phi = 0.15;
+    spherical.theta = 0;
+    spherical.radius = 12;
+    target.set(0,0,0);
+  });
+
+  document.getElementById('btn-bottom').addEventListener('click', ()=>{
+    spherical.phi = Math.PI - 0.15;
+    spherical.theta = 0;
+    spherical.radius = 12;
+    target.set(0,0,0);
+  });
+
+  document.getElementById('btn-side').addEventListener('click', ()=>{
+    spherical.phi = Math.PI/2;
+    spherical.theta = 0;
+    spherical.radius = 10;
+    target.set(0,0,0);
+  });
+
+  document.getElementById('btn-zoom-in').addEventListener('click', ()=>{
+    spherical.radius = Math.max(3, spherical.radius - 2);
+  });
+
+  document.getElementById('btn-zoom-out').addEventListener('click', ()=>{
+    spherical.radius = Math.min(30, spherical.radius + 2);
+  });
+
+  document.getElementById('btn-wireframe').addEventListener('click', function(){
+    wireframeMode = !wireframeMode;
+    this.classList.toggle('active');
+    boardGroup.traverse(child => {
+      if(child.isMesh && child.material){
+        child.material.wireframe = wireframeMode;
+      }
+    });
+  });
+
+  document.getElementById('btn-explode').addEventListener('click', function(){
+    exploded = !exploded;
+    this.classList.toggle('active');
+  });
+
+  document.getElementById('btn-xray').addEventListener('click', function(){
+    xrayMode = !xrayMode;
+    this.classList.toggle('active');
+    traceGroup.visible = xrayMode;
+    boardGroup.traverse(child => {
+      if(child.isMesh && child.material && child.userData.type === 'component'){
+        child.material.transparent = xrayMode;
+        child.material.opacity = xrayMode ? 0.6 : 1;
+      }
+    });
+    document.getElementById('btn-xray').classList.toggle('active');
+  });
+
+  document.getElementById('btn-schematic').addEventListener('click', function(){
+    const overlay = document.getElementById('schematic-overlay');
+    overlay.classList.toggle('show');
+    this.classList.toggle('active');
+  });
+}
+
+function setupTabs(){
+  document.querySelectorAll('.sidebar-tab').forEach(tab => {
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.sidebar-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+function animateCameraTo(position, radius){
+  const startTheta = spherical.theta;
+  const startPhi = spherical.phi;
+  const startRadius = spherical.radius;
+
+  spherical.radius = radius || startRadius;
+  spherical.phi = 0.8;
+  spherical.theta = Math.atan2(position.x, position.z) + 0.5;
+  target.copy(position);
+  target.y = 0;
+}
+
+// ─── ANIMATION LOOP ──────────────────────────────────────────
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const time = clock.getElapsedTime();
+
+  updateCamera();
+
+  // Explode animation
+  if(exploded && explodeProgress < 1){
+    explodeProgress = Math.min(1, explodeProgress + dt * 2);
+  } else if(!exploded && explodeProgress > 0){
+    explodeProgress = Math.max(0, explodeProgress - dt * 2);
+  }
+
+  if(explodeProgress > 0){
+    components.forEach(comp => {
+      const mesh = componentMeshes[comp.id];
+      if(mesh){
+        const dir = mesh.position.clone().normalize();
+        dir.y = Math.sign(mesh.position.y) * 0.5;
+        mesh.position.y = mesh.userData.origY + dir.y * explodeProgress * 3;
+
+        if(comp.section === 'Power') mesh.position.x += explodeProgress * -1;
+        if(comp.section === 'EM Front-End') mesh.position.z += explodeProgress * 1;
+        if(comp.section === 'Connectors') mesh.position.z += explodeProgress * -1;
+      }
+    });
+  } else {
+    components.forEach(comp => {
+      const mesh = componentMeshes[comp.id];
+      if(mesh){
+        mesh.position.y = mesh.userData.origY;
+        mesh.position.x = comp.x * SCALE * 10;
+        mesh.position.z = comp.y * SCALE * 10;
+      }
+    });
+  }
+
+  // LED glow pulse
+  boardGroup.children.forEach(child => {
+    if(child.userData.type === 'glow'){
+      child.material.opacity = 0.3 + Math.sin(time * 3) * 0.3;
+      child.scale.setScalar(1 + Math.sin(time * 2) * 0.15);
+    }
+  });
+
+  // Subtle board hover
+  boardGroup.rotation.y = Math.sin(time * 0.1) * 0.005;
+
+  renderer.render(scene, camera);
+
+  // FPS
+  frameCount++;
+  if(performance.now() - lastFpsTime > 1000){
+    document.getElementById('fps-counter').textContent = 'FPS: ' + frameCount;
+    frameCount = 0;
+    lastFpsTime = performance.now();
+  }
+}
+
+// Loading bar animation
+let loadProgress = 0;
+const loadInterval = setInterval(()=>{
+  loadProgress += Math.random() * 30;
+  if(loadProgress > 95) loadProgress = 95;
+  document.getElementById('load-bar').style.width = loadProgress + '%';
+  if(loadProgress >= 95) clearInterval(loadInterval);
+}, 100);
+
+// Initialize
+init();
+
+})();
+</script>
+</body>
+</html>
